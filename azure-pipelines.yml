@@ -1,0 +1,35 @@
+trigger:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  buildDir: 'build'  # or 'dist' depending on your setup
+
+steps:
+  - task: NodeTool@0
+    inputs:
+      versionSpec: '18.x'
+    displayName: 'Install Node.js'
+
+  - script: |
+      npm install
+      npm run build:webpack
+    displayName: 'Build React App'
+
+  - task: AzureCLI@2
+    inputs:
+      azureSubscription: 'MicroAppDeployConnect'
+      scriptType: 'bash'
+      scriptLocation: 'inlineScript'
+      inlineScript: |
+        echo "Uploading to Azure Blob..."
+        az storage blob upload-batch \
+          --account-name <yourStorageAccountName> \
+          --destination '$web' \
+          --source $(buildDir) \
+          --overwrite
+    displayName: 'Deploy to Azure Blob Storage'
